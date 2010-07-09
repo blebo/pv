@@ -360,5 +360,3 @@ class Inverter(Device):
 		frm = self.receive()
 		return Inverter.interpret(frm.payload, layout, Device.STATUS) if \
 				frm is not None and frm.cmd == Frame.CMD_STA_R else None
-
-	def set_parameter
