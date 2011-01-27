@@ -1,28 +1,26 @@
-#!/usr/bin/env python
-"""
-License: The MIT License (MIT)
+# Copyright (c) 2010-2011 Edmund Tse
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+# of the Software, and to permit persons to whom the Software is furnished to do
+# so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 
-Copyright (c) 2010 Edmund Tse
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
-import serial, struct
+import struct
+import pv
 
 def bin2hex(data):
 	"""
@@ -30,7 +28,46 @@ def bin2hex(data):
 	"""
 	return data.encode('hex_codec')
 
-class Frame:
+def checksum(data):
+	"""
+	(bytes) -> (2 bytes)
+	Computes the checksum for the given data.
+	"""
+	return struct.pack('!H', sum(map(ord, data)))
+
+def parse_frame(data):
+	"""
+	Converts a frame in binary format into a Frame object
+	"""
+	if len(data) < 11:	# 2B sync 2B src 2B dst 2B cmd 1B len 0B data 2B checksum
+		raise ValueError("Frame too short (%d B)" % len(data))
+
+	if not checksum(data[0:-2]) == data[-2:]:
+		raise ValueError("Bad checksum")
+
+	(preamble, src, dst, cmd, size) = struct.unpack('!HHHHB', data[0:9])
+	if preamble != Frame.SYNC:
+		raise ValueError("Bad preamble")
+
+	payload = data[9:-2]
+	if len(payload) != size:
+		raise ValueError("Bad payload size: expected %d, actual %d" % (size, len(payload)))
+
+	return Frame(cmd, payload, dst, src)
+
+def interpret_data(data, layout, dictionary):
+	try:
+		numbers = struct.unpack('!' + 'H'*len(layout), data)
+	except struct.error as e:
+		print "Error unpacking data:", e
+		return None
+
+	values = dict(zip(layout, numbers))
+	return [(name, reduce(lambda x,y:(x<<16) + y, map(values.get, code)) / divisor)
+			for name, (code, divisor) in dictionary.items()
+			if reduce(lambda x,y: x and y, map(values.has_key, code))]
+
+class Frame(object):
 	"""
 	<sync> <src> <dst> <cmd> <len> <payload> <checksum>
 	  2B    2B    2B    2B    1B     len B       2B
@@ -78,48 +115,6 @@ class Frame:
 	CMD_ZRO =	0x0300		# Reset inverter E-Total and h-Total
 	CMD_ZRO_R =	0x0380		# Reset inverter E-Total and h-Total ACK
 
-	@staticmethod
-	def parse(data):
-		"""
-		Converts a frame in binary format into a Frame object
-		"""
-		if len(data) < 11:	# 2B sync 2B src 2B dst 2B cmd 1B len 0B data 2B checksum
-			raise ValueError("Frame too short (%d B)" % len(data))
-
-		if not Frame.checksum(data[0:-2]) == data[-2:]:
-			raise ValueError("Bad checksum")
-
-		(preamble, src, dst, cmd, size) = struct.unpack('!HHHHB', data[0:9])
-		if preamble != Frame.SYNC:
-			raise ValueError("Bad preamble")
-
-		payload = data[9:-2]
-		if len(payload) != size:
-			raise ValueError("Bad payload size: expected %d, actual %d" % (size, len(payload)))
-
-		return Frame(cmd, payload, dst, src)
-
-	@staticmethod
-	def checksum(data):
-		"""
-		(bytes) -> (2 bytes)
-		Computes the checksum for the given data.
-		"""
-		return struct.pack('!H', sum(map(ord, data)))
-
-	@staticmethod
-	def colorize(frm):
-		"""
-		Add ANSI colouring to a hex representation of a frame
-		"""
-		string = str(frm)
-		if len(string) < 22:
-			return string
-		return '\033[90m' + string[0:4] + '\033[93m' + string[4:8] + \
-				'\033[94m' + string[8:12] + '\033[97m' + string[12:16] + \
-				'\033[91m' + string[16:18] + '\033[00m' + string[18:-4] + \
-				'\033[92m' + string[-4:] + '\033[00m'
-
 	def __init__(self, cmd, payload='', dst=ADDR_DEFAULT, src=ADDR_DEFAULT):
 		assert(type(src) == int)
 		assert(type(cmd) == int)
@@ -131,18 +126,31 @@ class Frame:
 	def __repr__(self):
 		return bin2hex(self.bytes())
 
+	def colorize(self):
+		"""
+		Returns ANSI coloured hex representation of the frame
+		"""
+		string = str(self)
+		if len(string) < 22:
+			return string
+		return '\033[90m' + string[0:4] + '\033[93m' + string[4:8] + \
+				'\033[94m' + string[8:12] + '\033[97m' + string[12:16] + \
+				'\033[91m' + string[16:18] + '\033[00m' + string[18:-4] + \
+				'\033[92m' + string[-4:] + '\033[00m'
+
 	def bytes(self):
 		"""
 		Returns the bytes of this frame including preamble and checksum.
 		"""
 		data = struct.pack('!HHHHB', Frame.SYNC, self.src, self.dst, self.cmd, len(self.payload)) + self.payload
-		return data + Frame.checksum(data)
+		return data + checksum(data)
 
 class Device:
 	"""
 	Device is a base class that provides physical and link layer operations
 	"""
 	STATUS = {
+			# Field		Code			Divisor
 			'Temp-inv':	('\x00',		10.0),		# Inverter internal temperature (deg C)
 			'Vpv1':		('\x01',		10.0),		# PV1 Voltage (V)
 			'Vpv2':		('\x02',		10.0),		# PV2 Voltage (V)
@@ -207,32 +215,22 @@ class Device:
 			31: ('Communication between microcontrollers fails', 'Comm fails between M-S'),
 			}
 
-	def __init__(self, my_addr=Frame.ADDR_DEFAULT):
-		self.addr = my_addr
-		self.port = serial.Serial()
-
-	def connect(self, port, timeout=1):
-		"""
-		Opens the serial port for communication
-		"""
-		self.port.port = port
-		self.port.timeout = timeout
-		self.port.open()
-
-	def disconnect(self):
-		"""
-		Closes the serial connection
-		"""
-		self.port.close()
+	def __init__(self, port, addr):
+		self.addr = addr
+		self.port = port
 
 	def send(self, frm, use_frame_src=False):
 		"""
-		Writes a frame to serial port
+		Writes a frame to the port
 		"""
 		if not use_frame_src:
 			frm.src = self.addr
-		if __debug__:
-			print "\033[96mSEND\033[00m ->", Frame.colorize(frm)
+		if pv._DEBUG:
+			if pv._ANSI_COLOR:
+				print "\033[96mSEND\033[00m ->", frm.colorize()
+			else:
+				print "SEND ->", frm
+
 		self.port.write(frm.bytes())
 
 	def receive(self):
@@ -262,9 +260,14 @@ class Device:
 			if len(payload_checksum) != ord(length) + 2: break
 
 			buf = sync + src_dst_cmd + length + payload_checksum
-			if __debug__: print "\033[95mRECV\033[00m <-", Frame.colorize(bin2hex(buf)),
+			if pv._DEBUG:
+				if pv._ANSI_COLOR:
+					print "\033[95mRECV\033[00m <-", bin2hex(buf),
+				else:
+					print "RECV <-", bin2hex(buf),
+
 			try:
-				frm = Frame.parse(buf)
+				frm = parse_frame(buf)
 				if __debug__: print "OK"
 			except ValueError as e:
 				if __debug__: print e
@@ -274,21 +277,8 @@ class Inverter(Device):
 	"""
 	Contains methods to interact with a PV inverter
 	"""
-	@staticmethod
-	def interpret(data, layout, dictionary):
-		try:
-			numbers = struct.unpack('!' + 'H'*len(layout), data)
-		except struct.error as e:
-			print "Error unpacking data:", e
-			return None
-
-		values = dict(zip(layout, numbers))
-		return [(name, reduce(lambda x,y:(x<<16) + y, map(values.get, code)) / divisor)
-				for name, (code, divisor) in dictionary.items()
-				if reduce(lambda x,y: x and y, map(values.has_key, code))]
-
-	def __init__(self, my_addr=Frame.ADDR_HOST):
-		Device.__init__(self, my_addr)
+	def __init__(self, port, my_addr=Frame.ADDR_HOST):
+		Device.__init__(self, port, my_addr)
 
 	def reset(self):
 		"""
@@ -348,7 +338,7 @@ class Inverter(Device):
 		"""
 		self.send(Frame(Frame.CMD_PRM, dst=dst))
 		frm = self.receive()
-		return Inverter.interpret(frm.payload, layout, Device.PARAM) if \
+		return interpret_data(frm.payload, layout, Device.PARAM) if \
 				frm is not None and frm.cmd == Frame.CMD_PRM_R else None
 
 	def status(self, layout, dst=Frame.ADDR_DEV):
@@ -358,5 +348,5 @@ class Inverter(Device):
 		"""
 		self.send(Frame(Frame.CMD_STA, dst=dst))
 		frm = self.receive()
-		return Inverter.interpret(frm.payload, layout, Device.STATUS) if \
+		return interpret_data(frm.payload, layout, Device.STATUS) if \
 				frm is not None and frm.cmd == Frame.CMD_STA_R else None

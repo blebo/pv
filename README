@@ -1,0 +1,94 @@
+pv - a Python-based PV inverter monitoring library
+
+28 Jan 11
+
+Introduction
+============
+pv provides a simple Python API to monitor and control some photovoltaic
+inverters via serial connection.
+
+pv was developed specifically for the Carbon Management Solutions CMS-2000
+inverter, and is expected to work for the Solar Energy Australia Orion inverter
+since they are essentially the same device with a different badge. The
+communication protocol was based on examining the data exchange between the
+inverter device and the official Pro Control 2.0.0.0 monitoring software for the
+Orion inverter, and the SunEzy Control Software.
+
+For more information, see http://pv.codeplex.com/
+
+
+Getting Started
+===============
+
+This section will guide you through making the first communications with the
+PV inverter connected via the computer's serial port.
+
+Debugging
+---------
+For debugging purposes, the bytes sent and received via the serial port can be
+printed on screen. Additionally, ANSI colouring can be enabled for colour coding
+of different fields in each packet for readibility:
+	import pv
+	pv.debug()
+	pv.debug_color()
+
+
+Interfacing with CMS-2000
+-------------------------
+Communication with the solar inverter is over a serial interface. First, we need
+to open the serial port to which the inverter is connected:
+	import serial
+	port = serial.Serial('/dev/ttyS0')
+	port.open()
+
+We then construct a CMS inverter object on this port:
+	from pv import cms
+	inv = cms.Inverter(port)
+
+At this stage, the inverter does not represent a physical inverter, because we
+do not know whether or not one is actually connected. To initialise this object
+and associate it with an actual inverter:
+	inv.reset()					# Reset all communications on the serial connection
+	sn = inv.discover()			# Look for connected devices
+	if sn is None:
+		print "Inverter is not connected."
+		sys.exit(1)
+	ok = inv.register(sn)		# Associates the inverter and assigns default address
+	if not ok:
+		print "Inverter registration failed."
+		sys.exit(1)
+
+After registering the connected inverter, we can start querying it. For example,
+to obtain an extended version string for the inverter:
+	print inv.version()
+
+Inverter parameters and status require a little more processing because the
+query returns more than one field, and the values are packed into a binary
+bitstream. First, we find out the layout in which the data that the inverter
+sends to us is organised. Then, we take the data queried from the inverter, and
+then use the layout information to interpret what it means:
+	param_layout = inv.param_layout()
+	parameters = inv.parameters(param_layout)
+	for field in parameters:
+		print "%-10s: %s" % field
+
+	status_layout = inv.status_layout()
+	status = inv.status(status_layout)
+	for field in status:
+		print "%-10s: %s" % field
+
+
+PVOutput.org
+------------
+To interact with the PVOutput.org service, you must first create a connection to
+PVOutput.org:
+	from pv import pvoutput
+	api_key = ''
+	system_id = 123
+	conn = pvoutput.Connection(api_key, system_id)
+
+Next, interactions via the PVOutput.org API can be made via the methods of this
+connection object:
+	import time
+	conn.add_status(time.strftime('%Y%m%d'), time.strftime('%H:%M'), status['Pac'])
+	print conn.get_status()

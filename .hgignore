@@ -1,0 +1,5 @@
+syntax: glob
+
+# 'Standard' ignores
+*.py[oc]
+.*.sw[po]
