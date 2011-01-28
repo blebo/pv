@@ -43,30 +43,32 @@ class Connection():
 				'g': generated
 				}
 		if exported:
-			params.append({'e': exported})
+			params['e'] = exported
 		if peak_power:
-			params.append({'pp': peak_power})
+			params['pp'] = peak_power
 		if peak_time:
-			params.append({'pt': peak_time})
+			params['pt'] = peak_time
 		if condition:
-			params.append({'cd': condition})
+			params['cd'] = condition
 		if min_temp:
-			params.append({'tm': min_temp})
+			params['tm'] = min_temp
 		if max_temp:
-			params.append({'tx': max_temp})
+			params['tx'] = max_temp
 		if comments:
-			params.append({'cm': comments})
+			params['cm'] = comments
 		if import_peak:
-			params.append({'ip': import_peak})
+			params['ip'] = import_peak
 		if import_offpeak:
-			params.append({'io': import_offpeak})
+			params['op'] = import_offpeak
 		if import_shoulder:
-			params.append({'is': import_shoulder})
+			params['is'] = import_shoulder
 
 		response = self.make_request('POST', path, params)
 
+		if response.status == 400:
+			raise ValueError(response.read())
 		if response.status != 200:
-			raise StandardError('POST failed:', response.status, response.reason, response.read())
+			raise StandardError(response.read())
 
 	def add_status(self, date, time, energy_exp, power_exp=None, energy_imp=None, power_imp=None, cumulative=False):
 		"""
@@ -79,19 +81,21 @@ class Connection():
 				'v1': energy_exp
 				}
 		if power_exp:
-			params.append({'v2': power_exp})
+			params['v2'] = power_exp
 		if energy_imp:
-			params.append({'v3': energy_imp})
+			params['v3'] = energy_imp
 		if power_imp:
-			params.append({'v4': power_imp})
+			params['v4'] = power_imp
 		if cumulative:
-			params.append({'c1': 1})
+			params['c1'] = 1
 		params = urllib.urlencode(params)
 
 		response = self.make_request('POST', path, params)
 
+		if response.status == 400:
+			raise ValueError(response.read())
 		if response.status != 200:
-			raise StandardError('POST failed:', response.status, response.reason, response.read())
+			raise StandardError(response.read())
 
 	def get_status(self, date=None, time=None):
 		"""
@@ -107,8 +111,30 @@ class Connection():
 
 		response = self.make_request("GET", path, params)
 
+		if response.status == 400:
+			raise ValueError(response.read())
 		if response.status != 200:
-			raise StandardError('GET failed:', response.status, response.reason, response.read())
+			raise StandardError(response.read())
+
+		return response.read()
+
+	def delete_status(self, date, time):
+		"""
+		Removes an existing status
+		"""
+		path = '/service/r1/deletestatus.jsp'
+		params = {
+				'd': date,
+				't': time
+				}
+		params = urllib.urlencode(params)
+
+		response = self.make_request("POST", path, params)
+
+		if response.status == 400:
+			raise ValueError(response.read())
+		if response.status != 200:
+			raise StandardError(response.read())
 
 		return response.read()
 

@@ -90,5 +90,11 @@ PVOutput.org:
 Next, interactions via the PVOutput.org API can be made via the methods of this
 connection object:
 	import time
-	conn.add_status(time.strftime('%Y%m%d'), time.strftime('%H:%M'), status['Pac'])
+	status = dict(status)
+	conn.add_status(
+			time.strftime('%Y%m%d'),
+			time.strftime('%H:%M'),
+			energy_exp=status['E-Total'],
+			power_exp=status['Pac'],
+			cumulative=True)
 	print conn.get_status()
