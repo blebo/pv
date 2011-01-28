@@ -268,9 +268,11 @@ class Device:
 
 			try:
 				frm = parse_frame(buf)
-				if __debug__: print "OK"
+				if pv._DEBUG:
+					print "OK"
 			except ValueError as e:
-				if __debug__: print e
+				if pv._DEBUG:
+					print e
 		return frm
 
 class Inverter(Device):
