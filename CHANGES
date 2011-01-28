@@ -3,7 +3,7 @@ pv - a Python-based PV inverter monitoring library
 Change Log
 ==========
 
-0.2 - 28 Jul 10
+0.2 - 28 Jan 11
  * Added a new module to connect to pvoutput.org service.
  * Changed directory layout and moved pv into a subdirectory.
  * Removed all uses of @staticmethod.
