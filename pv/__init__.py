@@ -22,7 +22,7 @@
 import pv
 
 __version__ = '0.2'
-__date__ = '9 Jul 10'
+__date__ = '28 Jan 11'
 
 _ANSI_COLOR = False		# Use ANSI colouring on output
 _DEBUG = False			# Print debug statements
