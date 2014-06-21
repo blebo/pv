@@ -19,6 +19,7 @@
 # SOFTWARE.
 #
 
+from __future__ import print_function
 import struct
 import pv
 
@@ -63,7 +64,7 @@ def interpret_data(data, layout, dictionary):
     try:
         numbers = struct.unpack('!' + 'H'*len(layout), data)
     except struct.error as e:
-        print "Error unpacking data:", e
+        print("Error unpacking data:", e)
         return None
 
     values = dict(zip(layout, numbers))
@@ -236,9 +237,9 @@ class Device:
             frm.src = self.addr
         if pv._DEBUG:
             if pv._ANSI_COLOR:
-                print "\033[96mSEND\033[00m ->", frm.colorize()
+                print("\033[96mSEND\033[00m ->", frm.colorize())
             else:
-                print "SEND ->", frm
+                print("SEND ->", frm)
 
         self.port.write(frm.bytes())
 
@@ -278,17 +279,17 @@ class Device:
             buf = sync + src_dst_cmd + length + payload_checksum
             if pv._DEBUG:
                 if pv._ANSI_COLOR:
-                    print "\033[95mRECV\033[00m <-", bin2hex(buf),
+                    print("\033[95mRECV\033[00m <-", bin2hex(buf),)
                 else:
-                    print "RECV <-", bin2hex(buf),
+                    print("RECV <-", bin2hex(buf),)
 
             try:
                 frm = parse_frame(buf)
                 if pv._DEBUG:
-                    print "OK"
+                    print("OK")
             except ValueError as e:
                 if pv._DEBUG:
-                    print e
+                    print(e)
         return frm
 
 
