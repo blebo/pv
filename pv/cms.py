@@ -188,10 +188,10 @@ class Device:
         'DZac':			('\x49',	1),     # Allowable Delta Zac of operation
     }
 
-    MODE = {0: 'Wait', 1: 'Normal', 2: 'Fault', 3: 'Permenant Fault'}
+    MODE = {0: 'Wait', 1: 'Normal', 2: 'Fault', 3: 'Permanent Fault'}
 
     ERROR = {		# The 2 error bytes are bit fields, e.g. ERROR[16] = 0x0100
-        0: ('The GFCI detection circucit is abnormal', 'GFCI ckt fails'),
+        0: ('The GFCI detection circuit is abnormal', 'GFCI ckt fails'),
         1: ('The DC output sensor is abnormal', 'DC sensor fails'),
         2: ('The 2.5V reference inside is abnormal', 'Ref 2.5V fails'),
         3: ('Different measurements between Master and Slave for output DC current', 'DC inj. differs for M-S'),
@@ -203,13 +203,13 @@ class Device:
         9: ('No grid voltage detected', 'No-Utility'),
         10: ('Ground current is too high', 'Ground I high'),
         11: ('DC bus is not correct', 'DC BUS fails'),
-        12: ('Master and Slave firmware version is unmatch', 'M-S Version Fail'),
+        12: ('Master and Slave firmware version is unmatched', 'M-S Version Fail'),
         13: ('Internal temperature is high', 'Temperature high'),
         14: ('AutoTest failed', 'Test Fail'),
         15: ('PV voltage is too high', 'Vpv high'),
         16: ('Fan Lock', 'FanLock-Warning'),
         17: ('The measured AC voltage is out of tolerable range', 'Vac out of range'),
-        18: ('Isulation resistance of PV to earth is too low', 'PV insulation low'),
+        18: ('Insulation resistance of PV to earth is too low', 'PV insulation low'),
         19: ('The DC injection to grid is too high', 'DC injection high'),
         20: ('Different measurements between Master and Slave for dl, Fac, Uac or Zac', 'Fac,Zac,Vac differs for M-S'),
         21: ('Different measurements between Master and Slave for grid impedance', 'Zac differs for M-S'),
@@ -222,7 +222,7 @@ class Device:
         28: ('The slave frequency is out of tolerable range', 'Fac-Slave out of range'),
         29: ('The master frequency is out of tolerable range', 'Fac-Master out of range'),
         30: ('EEPROM reading or writing error', 'EEPROM fails'),
-        31: ('Communication between microcontrollers fails', 'Comm fails between M-S'),
+        31: ('Communication between micro-controllers fails', 'Comm fails between M-S'),
     }
 
     def __init__(self, port, addr):
