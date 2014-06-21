@@ -27,14 +27,16 @@ __date__ = '28 Jan 11'
 _ANSI_COLOR = False		# Use ANSI colouring on output
 _DEBUG = False			# Print debug statements
 
+
 def debug():
-	"""
-	Enables printing of debug messages
-	"""
-	pv._DEBUG = True
+    """
+    Enables printing of debug messages
+    """
+    pv._DEBUG = True
+
 
 def debug_color():
-	"""
-	Enables ANSI coloured output in debug messages
-	"""
-	pv._ANSI_COLOR = True
+    """
+    Enables ANSI coloured output in debug messages
+    """
+    pv._ANSI_COLOR = True
