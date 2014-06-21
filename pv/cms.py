@@ -29,6 +29,7 @@ def bin2hex(data):
     """
     return data.encode('hex_codec')
 
+
 def checksum(data):
     """
     (bytes) -> (2 bytes)
@@ -36,11 +37,12 @@ def checksum(data):
     """
     return struct.pack('!H', sum(map(ord, data)))
 
+
 def parse_frame(data):
     """
     Converts a frame in binary format into a Frame object
     """
-    if len(data) < 11:	# 2B sync 2B src 2B dst 2B cmd 1B len 0B data 2B checksum
+    if len(data) < 11:  # 2B sync 2B src 2B dst 2B cmd 1B len 0B data 2B checksum
         raise ValueError("Frame too short (%d B)" % len(data))
 
     if not checksum(data[0:-2]) == data[-2:]:
@@ -56,6 +58,7 @@ def parse_frame(data):
 
     return Frame(cmd, payload, dst, src)
 
+
 def interpret_data(data, layout, dictionary):
     try:
         numbers = struct.unpack('!' + 'H'*len(layout), data)
@@ -64,17 +67,18 @@ def interpret_data(data, layout, dictionary):
         return None
 
     values = dict(zip(layout, numbers))
-    return [(name, reduce(lambda x,y:(x<<16) + y, map(values.get, code)) / divisor)
+    return [(name, reduce(lambda x, y:(x << 16) + y, map(values.get, code)) / divisor)
             for name, (code, divisor) in dictionary.items()
-            if reduce(lambda x,y: x and y, map(values.has_key, code))]
+            if reduce(lambda x, y: x and y, map(values.has_key, code))]
+
 
 class Frame(object):
     """
     <sync> <src> <dst> <cmd> <len> <payload> <checksum>
       2B    2B    2B    2B    1B     len B       2B
     """
-    MAX_SIZE =		256			# Arbitrary max frame size
-    SYNC =			0xaaaa		# 2 sync bytes preamble "1010101010101010"
+    MAX_SIZE =      256			# Arbitrary max frame size
+    SYNC =          0xaaaa		# 2 sync bytes preamble "1010101010101010"
     ADDR_DEFAULT =	0x0000		# Broadcast address
     ADDR_HOST =		0x0100		# Default host address
     ADDR_DEV =		0x0001		# Default device address
@@ -135,9 +139,9 @@ class Frame(object):
         if len(string) < 22:
             return string
         return '\033[90m' + string[0:4] + '\033[93m' + string[4:8] + \
-                '\033[94m' + string[8:12] + '\033[97m' + string[12:16] + \
-                '\033[91m' + string[16:18] + '\033[00m' + string[18:-4] + \
-                '\033[92m' + string[-4:] + '\033[00m'
+            '\033[94m' + string[8:12] + '\033[97m' + string[12:16] + \
+            '\033[91m' + string[16:18] + '\033[00m' + string[18:-4] + \
+            '\033[92m' + string[-4:] + '\033[00m'
 
     def bytes(self):
         """
@@ -146,75 +150,79 @@ class Frame(object):
         data = struct.pack('!HHHHB', Frame.SYNC, self.src, self.dst, self.cmd, len(self.payload)) + self.payload
         return data + checksum(data)
 
+
 class Device:
     """
     Device is a base class that provides physical and link layer operations
     """
     STATUS = {
-            # Field		Code			Divisor
-            'Temp-inv':	('\x00',		10.0),		# Inverter internal temperature (deg C)
-            'Vpv1':		('\x01',		10.0),		# PV1 Voltage (V)
-            'Vpv2':		('\x02',		10.0),		# PV2 Voltage (V)
-            'Vpv3':		('\x03',		10.0),		# PV3 Voltage (V)
-            'Ipv1':		('\x04',		10.0),		# PV1 Current (A)
-            'Ipv2':		('\x05',		10.0),		# PV2 Current (A)
-            'Ipv3':		('\x06',		10.0),		# PV3 Current (A)
-            'Vpv':		('\x40',		10.0),		# PV Voltage (V)
-            'Iac':		('\x41',		10.0),		# Current to grid (A)
-            'Vac':		('\x42',		10.0),		# Grid voltage (V)
-            'Fac':		('\x43',		100.0),		# Grid frequency (Hz)
-            'Pac':		('\x44',		1),			# Power to grid (W)
-            'Zac':		('\x45',		1),			# Grid impedance (mOhm)
-            'E-Total':	('\x47\x48',	10.0),		# Total energy to grid (kWh)
-            'h-Total':	('\x49\x4a',	1),			# Total Operation hours (Hr)
-            'Mode':		('\x4c',		1),			# Operation mode
-            'Error':	('\x7e\x7f',	1)			# Error
-            }
+        # Field		Code			Divisor
+        'Temp-inv':	('\x00',		10.0),		# Inverter internal temperature (deg C)
+        'Vpv1':		('\x01',		10.0),		# PV1 Voltage (V)
+        'Vpv2':		('\x02',		10.0),		# PV2 Voltage (V)
+        'Vpv3':		('\x03',		10.0),		# PV3 Voltage (V)
+        'Ipv1':		('\x04',		10.0),		# PV1 Current (A)
+        'Ipv2':		('\x05',		10.0),		# PV2 Current (A)
+        'Ipv3':		('\x06',		10.0),		# PV3 Current (A)
+        'Vpv':		('\x40',		10.0),		# PV Voltage (V)
+        'Iac':		('\x41',		10.0),		# Current to grid (A)
+        'Vac':		('\x42',		10.0),		# Grid voltage (V)
+        'Fac':		('\x43',		100.0),		# Grid frequency (Hz)
+        'Pac':		('\x44',		1),			# Power to grid (W)
+        'Zac':		('\x45',		1),			# Grid impedance (mOhm)
+        'E-Total':	('\x47\x48',	10.0),		# Total energy to grid (kWh)
+        'h-Total':	('\x49\x4a',	1),			# Total Operation hours (Hr)
+        'Mode':		('\x4c',		1),			# Operation mode
+        'Error':	('\x7e\x7f',	1)			# Error
+    }
+
     PARAM = {
-            'Vpc-start':	('\x40',	10.0),	# PV Start-up voltage (V)
-            'T-start':		('\x41',	1),		# Time to connect grid (Sec)
-            'Vac-Min':		('\x44',	10.0),	# Minimum operational grid voltage
-            'Vac-Max':		('\x45',	10.0),	# Maximum operational grid voltage
-            'Fac-Min':		('\x46',	100.0),	# Minimum operational frequency
-            'Fac-Max':		('\x47',	100.0),	# Maximum operational frequency
-            'Zac-Max':		('\x48',	1),		# Maximum operational grid impedance
-            'DZac':			('\x49',	1),		# Allowable Delta Zac of operation
-            }
-    MODE = {0:'Wait', 1:'Normal', 2:'Fault', 3:'Permenant Fault'}
+        'Vpc-start':	('\x40',    10.0),  # PV Start-up voltage (V)
+        'T-start':		('\x41',	1),	    # Time to connect grid (Sec)
+        'Vac-Min':		('\x44',	10.0),  # Minimum operational grid voltage
+        'Vac-Max':		('\x45',	10.0),  # Maximum operational grid voltage
+        'Fac-Min':		('\x46',	100.0), # Minimum operational frequency
+        'Fac-Max':		('\x47',	100.0), # Maximum operational frequency
+        'Zac-Max':		('\x48',	1),	    # Maximum operational grid impedance
+        'DZac':			('\x49',	1),     # Allowable Delta Zac of operation
+    }
+
+    MODE = {0: 'Wait', 1: 'Normal', 2: 'Fault', 3: 'Permenant Fault'}
+
     ERROR = {		# The 2 error bytes are bit fields, e.g. ERROR[16] = 0x0100
-             0: ('The GFCI detection circucit is abnormal', 'GFCI ckt fails'),
-             1: ('The DC output sensor is abnormal', 'DC sensor fails'),
-             2: ('The 2.5V reference inside is abnormal', 'Ref 2.5V fails'),
-             3: ('Different measurements between Master and Slave for output DC current', 'DC inj. differs for M-S'),
-             4: ('Different measurements between Master and Slave for GFCI', 'Ground I differs for M-S'),
-             5: ('DC Bus voltage is too low', 'Bus-Low-Fail'),
-             6: ('DC Bus voltage is too High', 'Bus-High-Fail'),
-             7: ('Device Fault', 'Device-Fault'),
-             8: ('Delta GridZ is too high', 'Delta Z high'),
-             9: ('No grid voltage detected', 'No-Utility'),
-            10: ('Ground current is too high', 'Ground I high'),
-            11: ('DC bus is not correct', 'DC BUS fails'),
-            12: ('Master and Slave firmware version is unmatch', 'M-S Version Fail'),
-            13: ('Internal temperature is high', 'Temperature high'),
-            14: ('AutoTest failed', 'Test Fail'),
-            15: ('PV voltage is too high', 'Vpv high'),
-            16: ('Fan Lock', 'FanLock-Warning'),
-            17: ('The measured AC voltage is out of tolerable range', 'Vac out of range'),
-            18: ('Isulation resistance of PV to earth is too low', 'PV insulation low'),
-            19: ('The DC injection to grid is too high', 'DC injection high'),
-            20: ('Different measurements between Master and Slave for dl, Fac, Uac or Zac', 'Fac,Zac,Vac differs for M-S'),
-            21: ('Different measurements between Master and Slave for grid impedance', 'Zac differs for M-S'),
-            22: ('Different measurements between Master and Slave for grid frequency', 'Fac differs for M-S'),
-            23: ('Different measurements between Master and Slave for grid voltage', 'Vac differs for M-S'),
-            24: ('Memory space is full', 'MemFull-Warning'),
-            25: ('Test of output AC relay fails', 'AC relay fails'),
-            26: ('The slave impedance is out of tolerable range', 'Zac-Slave out of range'),
-            27: ('The measured AC impedance is out of range', 'Zac-Master out of range'),
-            28: ('The slave frequency is out of tolerable range', 'Fac-Slave out of range'),
-            29: ('The master frequency is out of tolerable range', 'Fac-Master out of range'),
-            30: ('EEPROM reading or writing error', 'EEPROM fails'),
-            31: ('Communication between microcontrollers fails', 'Comm fails between M-S'),
-            }
+        0: ('The GFCI detection circucit is abnormal', 'GFCI ckt fails'),
+        1: ('The DC output sensor is abnormal', 'DC sensor fails'),
+        2: ('The 2.5V reference inside is abnormal', 'Ref 2.5V fails'),
+        3: ('Different measurements between Master and Slave for output DC current', 'DC inj. differs for M-S'),
+        4: ('Different measurements between Master and Slave for GFCI', 'Ground I differs for M-S'),
+        5: ('DC Bus voltage is too low', 'Bus-Low-Fail'),
+        6: ('DC Bus voltage is too High', 'Bus-High-Fail'),
+        7: ('Device Fault', 'Device-Fault'),
+        8: ('Delta GridZ is too high', 'Delta Z high'),
+        9: ('No grid voltage detected', 'No-Utility'),
+        10: ('Ground current is too high', 'Ground I high'),
+        11: ('DC bus is not correct', 'DC BUS fails'),
+        12: ('Master and Slave firmware version is unmatch', 'M-S Version Fail'),
+        13: ('Internal temperature is high', 'Temperature high'),
+        14: ('AutoTest failed', 'Test Fail'),
+        15: ('PV voltage is too high', 'Vpv high'),
+        16: ('Fan Lock', 'FanLock-Warning'),
+        17: ('The measured AC voltage is out of tolerable range', 'Vac out of range'),
+        18: ('Isulation resistance of PV to earth is too low', 'PV insulation low'),
+        19: ('The DC injection to grid is too high', 'DC injection high'),
+        20: ('Different measurements between Master and Slave for dl, Fac, Uac or Zac', 'Fac,Zac,Vac differs for M-S'),
+        21: ('Different measurements between Master and Slave for grid impedance', 'Zac differs for M-S'),
+        22: ('Different measurements between Master and Slave for grid frequency', 'Fac differs for M-S'),
+        23: ('Different measurements between Master and Slave for grid voltage', 'Vac differs for M-S'),
+        24: ('Memory space is full', 'MemFull-Warning'),
+        25: ('Test of output AC relay fails', 'AC relay fails'),
+        26: ('The slave impedance is out of tolerable range', 'Zac-Slave out of range'),
+        27: ('The measured AC impedance is out of range', 'Zac-Master out of range'),
+        28: ('The slave frequency is out of tolerable range', 'Fac-Slave out of range'),
+        29: ('The master frequency is out of tolerable range', 'Fac-Master out of range'),
+        30: ('EEPROM reading or writing error', 'EEPROM fails'),
+        31: ('Communication between microcontrollers fails', 'Comm fails between M-S'),
+    }
 
     def __init__(self, port, addr):
         self.addr = addr
@@ -244,21 +252,28 @@ class Device:
 
         while frm is None:
             byte = self.port.read()
-            if len(byte) != 1: break
-            if byte != sync[0]: continue
+            if len(byte) != 1:
+                break
+            if byte != sync[0]:
+                continue
 
             byte = self.port.read()
-            if len(byte) != 1: break
-            if byte != sync[1]: continue
+            if len(byte) != 1:
+                break
+            if byte != sync[1]:
+                continue
 
             src_dst_cmd = self.port.read(6)
-            if len(src_dst_cmd) != 6: break
+            if len(src_dst_cmd) != 6:
+                break
 
             length = self.port.read()
-            if len(length) != 1: break
+            if len(length) != 1:
+                break
 
             payload_checksum = self.port.read(ord(length) + 2)
-            if len(payload_checksum) != ord(length) + 2: break
+            if len(payload_checksum) != ord(length) + 2:
+                break
 
             buf = sync + src_dst_cmd + length + payload_checksum
             if pv._DEBUG:
@@ -275,6 +290,7 @@ class Device:
                 if pv._DEBUG:
                     print e
         return frm
+
 
 class Inverter(Device):
     """
@@ -342,7 +358,7 @@ class Inverter(Device):
         self.send(Frame(Frame.CMD_PRM, dst=dst))
         frm = self.receive()
         return interpret_data(frm.payload, layout, Device.PARAM) if \
-                frm is not None and frm.cmd == Frame.CMD_PRM_R else None
+            frm is not None and frm.cmd == Frame.CMD_PRM_R else None
 
     def status(self, layout, dst=Frame.ADDR_DEV):
         """
@@ -352,4 +368,4 @@ class Inverter(Device):
         self.send(Frame(Frame.CMD_STA, dst=dst))
         frm = self.receive()
         return interpret_data(frm.payload, layout, Device.STATUS) if \
-                frm is not None and frm.cmd == Frame.CMD_STA_R else None
+            frm is not None and frm.cmd == Frame.CMD_STA_R else None
